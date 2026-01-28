@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  submission: one
+  district: one
+  chiefdom: one
+  fertilizer: one
+  dealer: one
+  bags_25kg: 1
+  bags_50kg: 1
+
+two:
+  submission: two
+  district: two
+  chiefdom: two
+  fertilizer: two
+  dealer: two
+  bags_25kg: 1
+  bags_50kg: 1

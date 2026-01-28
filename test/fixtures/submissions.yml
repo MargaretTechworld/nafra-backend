@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  agency: one
+  submitted_by: one
+  submitted_at: 2026-01-25
+
+two:
+  agency: two
+  submitted_by: two
+  submitted_at: 2026-01-25
