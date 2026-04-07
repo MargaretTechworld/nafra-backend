@@ -104,11 +104,11 @@ class Api::Admin::AnalyticsController < ApplicationController
             .joins(:fertilizer)
             .where(submissions: { agency_id: agency_id })
             .where(submission_items: { district_id: district_id })
-            .select('fertilizers.name, chiefdoms.name as chiefdom_name, submission_items.bags_25kg, submission_items.bags_50kg')
+            .select('fertilizers.name as fertilizer_name, chiefdoms.name as chiefdom_name, submission_items.bags_25kg, submission_items.bags_50kg')
             .map do |item|
       {
-        fertilizer: item.fertilizer.name,
-        chiefdom: item.chiefdom.name,
+        fertilizer: item.fertilizer_name,
+        chiefdom: item.chiefdom_name,
         bags_25kg: item.bags_25kg,
         bags_50kg: item.bags_50kg
       }
@@ -135,6 +135,55 @@ class Api::Admin::AnalyticsController < ApplicationController
     }, status: :ok
   rescue StandardError => e
     render json: { error: 'Failed to fetch agency-district distribution', details: e.message }, status: :internal_server_error
+  end
+
+  def dealers_by_region
+    data = Region.joins(outlets: :dealer)
+                 .group('regions.name')
+                 .count('DISTINCT dealers.id')
+                 .map { |region, count| { region: region, dealer_count: count } }
+    render json: data
+  end
+
+  def dealers_by_district
+    data = District.joins(outlets: :dealer)
+                   .group('districts.name')
+                   .count('DISTINCT dealers.id')
+                   .map { |district, count| { district: district, dealer_count: count } }
+    render json: data
+  end
+
+  def dealers_by_category
+    data = Dealer.group(:category).count
+                 .map { |category, count| { category: category || 'Uncategorized', dealer_count: count } }
+    render json: data
+  end
+
+  def license_status_summary
+    active_count = Dealer.where(licensing_status: "Active")
+                         .where("license_expiry_date >= ?", Date.current)
+                         .count
+    expired_count = Dealer.where("license_expiry_date < ?", Date.current)
+                          .or(Dealer.where(licensing_status: "Not Licensed"))
+                          .count
+    
+    render json: {
+      active: active_count,
+      expired: expired_count,
+      total: Dealer.count
+    }
+  end
+
+  def dealer_operational_coverage
+    data = Dealer.all.includes(:outlets).map do |dealer|
+      {
+        dealer_name: dealer.name,
+        outlet_count: dealer.outlets.count,
+        regions: dealer.outlets.map { |o| o.region.name }.uniq,
+        districts: dealer.outlets.map { |o| o.district.name }.uniq
+      }
+    end
+    render json: data
   end
 
   private

@@ -1,6 +1,7 @@
 class Submission < ApplicationRecord
   belongs_to :agency
   belongs_to :submitted_by, class_name: "User", foreign_key: "submitted_by_id"
+  belongs_to :draft, optional: true
   has_many :submission_items, dependent: :destroy
 
   validates :agency, :submitted_by, presence: true

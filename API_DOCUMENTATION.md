@@ -431,10 +431,10 @@ Retrieve all submissions. Admin users see all submissions, agency users see only
 }
 ```
 
-### Create Submission
+### Create Submission (Direct)
 **POST** `/submissions`
 
-Submit fertilizer distribution data.
+Directly submit fertilizer distribution data without a draft.
 
 **Request:**
 ```json
@@ -460,49 +460,14 @@ Submit fertilizer distribution data.
 - At least one bag size (bags_25kg or bags_50kg) must be provided per item
 - `submitted_at` cannot be in the future
 
-**Response (201 Created):**
-```json
-{
-  "id": 1,
-  "agency": {
-    "id": 1,
-    "name": "Agency Name",
-    "project_name": "Project Name"
-  },
-  "submitted_by": {
-    "id": 2,
-    "name": "John Doe",
-    "email": "john@example.com"
-  },
-  "submitted_at": "2026-01-25",
-  "created_at": "2026-01-25T12:00:00.000Z",
-  "updated_at": "2026-01-25T12:00:00.000Z",
-  "submission_items": [
-    {
-      "id": 1,
-      "district": {"id": 1, "name": "District Name"},
-      "chiefdom": {"id": 1, "name": "Chiefdom Name"},
-      "fertilizer": {"id": 1, "name": "Fertilizer Name"},
-      "dealer": {"id": 1, "name": "Dealer Name", "license_number": "LIC123"},
-      "bags_25kg": 10,
-      "bags_50kg": 5,
-      "created_at": "2026-01-25T12:00:00.000Z",
-      "updated_at": "2026-01-25T12:00:00.000Z"
-    }
-  ],
-  "total_bags_25kg": 10,
-  "total_bags_50kg": 5
-}
-```
+---
 
-**Response (422 Unprocessable Entity):**
-```json
-{
-  "errors": [
-    "At least one bag size must be provided"
-  ]
-}
-```
+## Technical Notes
+
+### Draft Submission Flow
+The conversion from Draft to Submission is handled as an atomic transaction via the `Draft#submit!(user)` method. If any part of the process fails (e.g., database constraint error), the entire operation is rolled back, and the draft remains in 'draft' status.
+
+---
 
 ---
 
@@ -698,10 +663,127 @@ GET /api/admin/analytics/agency-district-distribution?agency_id=1&district_id=2
 
 ---
 
-## User Roles
+### User Roles
 
 - **admin**: Full access to all endpoints and data
 - **agency**: Limited to their own agency data and submissions
+
+---
+
+## Administrative Reference Data CRUD (Admin Only)
+
+These endpoints provide full CRUD operations for reference data.
+
+### Regions Management
+**GET/POST** `/admin/regions`
+**GET/PUT/DELETE** `/admin/regions/:id`
+
+**Request (Post):**
+```json
+{ "name": "Northern Region" }
+```
+
+### Districts Management
+**GET/POST** `/admin/districts`
+**GET/PUT/DELETE** `/admin/districts/:id`
+
+**Request (Post):**
+```json
+{ "name": "Bombali District", "region_id": 1 }
+```
+
+### Chiefdoms Management
+**GET/POST** `/admin/chiefdoms`
+**GET/PUT/DELETE** `/admin/chiefdoms/:id`
+
+**Request (Post):**
+```json
+{ "name": "Binkolo Chiefdom", "district_id": 1 }
+```
+
+### Townships Management
+**GET/POST** `/admin/townships`
+**GET/PUT/DELETE** `/admin/townships/:id`
+
+**Request (Post):**
+```json
+{ "name": "Central 1", "chiefdom_id": 1 }
+```
+
+### Dealers Management
+**GET/POST** `/admin/dealers`
+**GET/PUT/DELETE** `/admin/dealers/:id`
+
+**Request (Post/Put) with nested contacts and outlets:**
+```json
+{
+  "dealer": {
+    "name": "Test Dealer Corp",
+    "status": "active",
+    "category": "Fertilizer Dealer",
+    "category_type": "Wholesaler",
+    "head_office_address": "123 Main St",
+    "ceo_name": "John Doe",
+    "registration_date": "2026-01-01",
+    "license_expiry_date": "2027-01-01",
+    "licensing_status": "Active",
+    "contact_people_attributes": [
+      { "name": "Jane Smith", "role": "Sales Manager", "phone": "123456", "email": "jane@example.com", "is_primary": true }
+    ],
+    "outlets_attributes": [
+      { "address": "Terminal 1", "region_id": 1, "district_id": 1, "chiefdom_id": 1, "township_id": 1 }
+    ]
+  }
+}
+```
+
+---
+
+## Reference Data Endpoints (Public/Auth)
+
+### Get Regions
+**GET** `/regions`
+Returns all regions.
+
+### Get Townships
+**GET** `/townships`
+Returns all townships.
+
+---
+
+## Analytics Endpoints (Admin Only)
+
+### Bags by District
+**GET** `/admin/analytics/bags-by-district`
+
+### Bags by Agency
+**GET** `/admin/analytics/bags-by-agency`
+
+### Bags by Fertilizer
+**GET** `/admin/analytics/bags-by-fertilizer`
+
+### Agency Distribution by District
+**GET** `/admin/analytics/agency-district-distribution?agency_id=1&district_id=2`
+
+### Dealers by Region
+**GET** `/admin/analytics/dealers-by-region`
+Get total number of unique dealers per region.
+
+### Dealers by District
+**GET** `/admin/analytics/dealers-by-district`
+Get total number of unique dealers per district.
+
+### Dealers by Category
+**GET** `/admin/analytics/dealers-by-category`
+Get breakdown of dealers by their category.
+
+### License Status Summary
+**GET** `/admin/analytics/license-status-summary`
+Get counts of Active vs Expired/Unlicensed dealers.
+
+### Dealer Operational Coverage
+**GET** `/admin/analytics/dealer-operational-coverage`
+Get detailed list of dealers, their outlet counts, and the regions/districts they operate in.
 
 ---
 
@@ -713,17 +795,32 @@ GET /api/admin/analytics/agency-district-distribution?agency_id=1&district_id=2
 ### Agencies
 - id, name, project_name, ministry, user_id (foreign key), created_at, updated_at
 
+### Regions
+- id, name, created_at, updated_at
+
+### Districts
+- id, name, region_id (foreign key, optional), created_at, updated_at
+
+### Chiefdoms
+- id, name, district_id (foreign key), created_at, updated_at
+
+### Townships
+- id, name, chiefdom_id (foreign key), created_at, updated_at
+
+### Dealers
+- id, name, license_number, status, category, category_type, head_office_address, ceo_name, registration_date, license_expiry_date, licensing_status, created_at, updated_at
+
+### ContactPeople
+- id, dealer_id (foreign key), name, phone, email, role, is_primary, created_at, updated_at
+
+### Outlets
+- id, dealer_id (foreign key), address, region_id, district_id, chiefdom_id, township_id, created_at, updated_at
+
 ### Submissions
-- id, agency_id (foreign key), submitted_by_id (foreign key to users), submitted_at, created_at, updated_at
+- id, agency_id, submitted_by_id, draft_id (optional), submitted_at, created_at, updated_at
 
 ### SubmissionItems
-- id, submission_id (foreign key), district_id (foreign key), chiefdom_id (foreign key), fertilizer_id (foreign key), dealer_id (foreign key), bags_25kg, bags_50kg, created_at, updated_at
-
-### Supporting Tables
-- Districts (id, name, created_at, updated_at)
-- Chiefdoms (id, name, district_id, created_at, updated_at)
-- Fertilizers (id, name, created_at, updated_at)
-- Dealers (id, name, license_number, status, created_at, updated_at)
+- id, submission_id, district_id, chiefdom_id, fertilizer_id, dealer_id, bags_25kg, bags_50kg, created_at, updated_at
 
 ---
 

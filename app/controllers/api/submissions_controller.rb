@@ -5,7 +5,8 @@ class Api::SubmissionsController < ApplicationController
   def index
     submissions =
       if current_user.admin?
-        Submission.includes(:agency, :submitted_by, :submission_items).all
+        base = Submission.includes(:agency, :submitted_by, :submission_items)
+        params[:agency_id].present? ? base.where(agency_id: params[:agency_id]) : base.all
       else
         Submission.includes(:agency, :submitted_by, :submission_items).where(agency: current_user.agency)
       end

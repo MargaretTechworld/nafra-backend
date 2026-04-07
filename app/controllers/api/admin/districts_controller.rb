@@ -3,19 +3,19 @@ class Api::Admin::DistrictsController < ApplicationController
   before_action :require_admin!
 
   def index
-    districts = District.all.order(:name)
-    render json: districts
+    districts = District.all.includes(:region).order(:name)
+    render json: districts, include: :region
   end
 
   def show
     district = District.find(params[:id])
-    render json: district
+    render json: district, include: :region
   end
 
   def create
     district = District.new(district_params)
     if district.save
-      render json: district, status: :created
+      render json: district, include: :region, status: :created
     else
       render json: { errors: district.errors.full_messages }, status: :unprocessable_entity
     end
@@ -24,7 +24,7 @@ class Api::Admin::DistrictsController < ApplicationController
   def update
     district = District.find(params[:id])
     if district.update(district_params)
-      render json: district
+      render json: district, include: :region
     else
       render json: { errors: district.errors.full_messages }, status: :unprocessable_entity
     end
@@ -39,7 +39,7 @@ class Api::Admin::DistrictsController < ApplicationController
   private
 
   def district_params
-    params.require(:district).permit(:name)
+    params.require(:district).permit(:name, :region_id)
   end
 
   def require_admin!

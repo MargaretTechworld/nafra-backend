@@ -4,6 +4,8 @@ class User < ApplicationRecord
   enum role: { admin: 'admin', agency: 'agency' }
 
   has_one :agency
+  has_many :drafts, dependent: :destroy
+  has_many :submissions, dependent: :destroy
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :role, presence: true, inclusion: { in: %w[admin agency] }    
