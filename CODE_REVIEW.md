@@ -1,9 +1,26 @@
 # Code Review & Verification Report
 
-## Date: January 25, 2026
-## Status: ⚠️ NEEDS ATTENTION - Migration Issue Found
+## Date: April 7, 2026
+## Status: ✅ UPDATED & REFACTORED (Migration still pending)
 
 ---
+
+## 🚀 NEW REFACTORS & STANDARDIZATION (April 2026)
+
+### 1. Model & Service Layer ✅
+- ✅ **SubmissionsService**: Extracted complex creation logic from SubmissionsController.
+  - Handles transaction-safe creation of Submission and SubmissionItems.
+  - Standardized validation and rollback mechanism.
+
+### 2. Controllers ✅
+- ✅ **ApplicationController**: Centralized JWT logic.
+  - Added `generate_jwt_token` and `decode_jwt_token`.
+  - Updated `current_user` to use standardized decoding with claims validation.
+- ✅ **Api::AuthController**: Simplified to use centralized JWT methods.
+- ✅ **Api::SubmissionsController**: Refactored `create` to use `SubmissionsService`.
+
+---
+
 
 ## ✅ VERIFIED & WORKING CORRECTLY
 

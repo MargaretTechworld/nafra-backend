@@ -35,9 +35,9 @@ class Draft < ApplicationRecord
         submitted_at: Time.current
       )
 
-      # 2. Create SubmissionItems from data
-      # If data is nested (frontend format), we need to flatten it
-      items_to_create = []
+      # 2. Extract and Aggregate Items from data
+      aggregated_items = {} # Key: [chiefdom_id, fertilizer_id, dealer_id] -> { data }
+      
       if data.is_a?(Hash) && data['districts'].is_a?(Array)
         data['districts'].each do |district_data|
           district_name = district_data['district'] || district_data['name']
@@ -50,71 +50,47 @@ class Draft < ApplicationRecord
             next unless chiefdom
 
             chiefdom_data['fertilizers']&.each do |fert_data|
-              fert_name = fert_data['name']
-              fertilizer = Fertilizer.find_by(name: fert_name)
-              dealer_id = fert_data['dealership']
-              dealer = Dealer.find_by(id: dealer_id)
-
+              fertilizer = Fertilizer.find_by(name: fert_data['name'])
+              dealer = Dealer.find_by(id: fert_data['dealership'] || fert_data['dealer_id'])
               next unless fertilizer && dealer
 
-              # Handle both formats: 
-              # 1. Frontend format: {bagSize: "25", bagCount: 7}
-              # 2. Legacy format: {bag25kg: 7, bag50kg: 7}
+              # Grouping Key
+              key = [chiefdom.id, fertilizer.id, dealer.id]
+              aggregated_items[key] ||= {
+                submission_id: submission.id,
+                district_id: district.id,
+                chiefdom_id: chiefdom.id,
+                fertilizer_id: fertilizer.id,
+                dealer_id: dealer.id,
+                bags_25kg: 0,
+                bags_50kg: 0
+              }
+
+              # Add bag counts (handling both split and combined formats)
               if fert_data['bagSize'].present? && fert_data['bagCount'].present?
-                # Frontend format - already split by bag size
-                bag_size = fert_data['bagSize'].to_s
-                bag_count = fert_data['bagCount'].to_i
-                
-                next if bag_count <= 0
-                
-                items_to_create << {
-                  district_id: district.id,
-                  chiefdom_id: chiefdom.id,
-                  fertilizer_id: fertilizer.id,
-                  dealer_id: dealer.id,
-                  bags_25kg: bag_size == '25' ? bag_count : 0,
-                  bags_50kg: bag_size == '50' ? bag_count : 0
-                }
+                count = fert_data['bagCount'].to_i
+                if fert_data['bagSize'].to_s == '25'
+                  aggregated_items[key][:bags_25kg] += count
+                elsif fert_data['bagSize'].to_s == '50'
+                  aggregated_items[key][:bags_50kg] += count
+                end
               else
-                # Legacy format - combined bag sizes
-                bags_25 = fert_data['bag25kg'].to_i
-                bags_50 = fert_data['bag50kg'].to_i
-                
-                next if bags_25 <= 0 && bags_50 <= 0
-                
-                items_to_create << {
-                  district_id: district.id,
-                  chiefdom_id: chiefdom.id,
-                  fertilizer_id: fertilizer.id,
-                  dealer_id: dealer.id,
-                  bags_25kg: bags_25,
-                  bags_50kg: bags_50
-                }
+                aggregated_items[key][:bags_25kg] += fert_data['bag25kg'].to_i
+                aggregated_items[key][:bags_50kg] += fert_data['bag50kg'].to_i
               end
             end
           end
         end
+        
+        # 3. Bulk Create aggregated records
+        final_items = aggregated_items.values.select { |item| item[:bags_25kg] > 0 || item[:bags_50kg] > 0 }
+        SubmissionItem.insert_all!(final_items) if final_items.any?
       elsif data.is_a?(Array)
-        items_to_create = data
+        # Handle flat array format if provided
+        SubmissionItem.insert_all!(data.map { |d| d.merge(submission_id: submission.id) }) if data.any?
       end
 
-      if items_to_create.empty?
-        errors.add(:data, "contains no valid distribution records to submit")
-        raise ActiveRecord::Rollback
-      end
-
-      items_to_create.each do |item_data|
-        submission.submission_items.create!(
-          district_id: item_data[:district_id] || item_data['district_id'],
-          chiefdom_id: item_data[:chiefdom_id] || item_data['chiefdom_id'],
-          fertilizer_id: item_data[:fertilizer_id] || item_data['fertilizer_id'],
-          dealer_id: item_data[:dealer_id] || item_data['dealer_id'],
-          bags_25kg: item_data[:bags_25kg] || item_data['bags_25kg'].to_i,
-          bags_50kg: item_data[:bags_50kg] || item_data['bags_50kg'].to_i
-        )
-      end
-
-      # 3. Destroy the Draft after successful submission
+      # 4. Destroy the Draft after successful submission
       destroy!
       
       submission

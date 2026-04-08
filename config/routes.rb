@@ -5,7 +5,7 @@ Rails.application.routes.draw do
     post 'auth/admin-setup', to: 'auth#admin_setup'
     post 'auth/agency-setup', to: 'auth#agency_setup'
     
-    resources :submissions, only: [:index, :create]
+    resources :submissions, only: [:index, :create, :destroy]
     resources :drafts, only: [:index, :show, :create, :update, :destroy] do
       member do
         post :submit
@@ -23,8 +23,7 @@ Rails.application.routes.draw do
     post 'dealers', to: 'reference#create_dealer'
     get 'regions', to: 'reference#regions'
     post 'regions', to: 'reference#create_region'
-    get 'townships', to: 'reference#townships'
-    post 'townships', to: 'reference#create_township'
+    post 'regions', to: 'reference#create_region'
 
     namespace :admin do
       resources :users, only: [:create, :index, :show, :update]
@@ -34,7 +33,7 @@ Rails.application.routes.draw do
       resources :regions
       resources :districts
       resources :chiefdoms
-      resources :townships
+      resources :chiefdoms
       resources :fertilizers
       resources :dealers
       

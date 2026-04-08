@@ -11,6 +11,8 @@ class Api::SubmissionsController < ApplicationController
         Submission.includes(:agency, :submitted_by, :submission_items).where(agency: current_user.agency)
       end
 
+    submissions = submissions.order(submitted_at: :desc)
+
     page = params[:page] || 1
     per_page = params[:per_page] || 20
     
@@ -28,30 +30,37 @@ class Api::SubmissionsController < ApplicationController
     agency = find_agency_for_submission
     return if agency.nil?
 
-    submission = Submission.new(
-      agency: agency,
-      submitted_by: current_user,
-      submitted_at: params[:submitted_at] || Date.today
+    result = SubmissionsService.create_with_items(
+      agency, 
+      current_user, 
+      params[:items] || [], 
+      params[:submitted_at]
     )
 
-    if submission.save
-      items_params = params[:items] || []
-      items_params.each do |item|
-        submission.submission_items.build(item.permit(:district_id, :chiefdom_id, :fertilizer_id, :dealer_id, :bags_25kg, :bags_50kg))
-      end
-
-      if submission.submission_items.all?(&:valid?)
-        submission.submission_items.each(&:save!)
-        render json: SubmissionSerializer.new(submission).as_json, status: :created
-      else
-        submission.destroy
-        render json: { errors: submission.submission_items.map { |item| item.errors.full_messages }.flatten }, status: :unprocessable_entity
-      end
+    if result[:success]
+      render json: SubmissionSerializer.new(result[:submission]).as_json, status: :created
     else
-      render json: { errors: submission.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: result[:errors] }, status: :unprocessable_entity
     end
   rescue StandardError => e
     render json: { error: 'Failed to create submission', details: e.message }, status: :internal_server_error
+  end
+
+  def destroy
+    unless current_user.admin?
+      render json: { error: 'Unauthorized: Only admins can delete submissions' }, status: :forbidden
+      return
+    end
+
+    submission = Submission.find_by(id: params[:id])
+    if submission
+      submission.destroy
+      render json: { message: 'Submission deleted successfully' }, status: :ok
+    else
+      render json: { error: 'Submission not found' }, status: :not_found
+    end
+  rescue StandardError => e
+    render json: { error: 'Failed to delete submission', details: e.message }, status: :internal_server_error
   end
 
   private

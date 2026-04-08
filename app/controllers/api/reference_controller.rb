@@ -68,11 +68,6 @@ class Api::ReferenceController < ApplicationController
     render json: regions
   end
 
-  def townships
-    townships = Township.select(:id, :name, :chiefdom_id).order(:name)
-    render json: townships
-  end
-
   def create_dealer
     return render json: { error: 'Only admins can create dealers' }, status: :forbidden unless current_user.admin?
     
@@ -95,25 +90,10 @@ class Api::ReferenceController < ApplicationController
     end
   end
 
-  def create_township
-    return render json: { error: 'Only admins can create townships' }, status: :forbidden unless current_user&.admin?
-    
-    township = Township.new(township_params)
-    if township.save
-      render json: township, status: :created
-    else
-      render json: { errors: township.errors.full_messages }, status: :unprocessable_entity
-    end
-  end
-
   private
 
   def region_params
     params.require(:region).permit(:name)
-  end
-
-  def township_params
-    params.require(:township).permit(:name, :chiefdom_id)
   end
 
   def district_params

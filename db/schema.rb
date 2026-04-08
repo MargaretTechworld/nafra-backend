@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_02_16_142500) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_08_031200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -151,14 +151,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_16_142500) do
     t.bigint "region_id", null: false
     t.bigint "district_id", null: false
     t.bigint "chiefdom_id", null: false
-    t.bigint "township_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["chiefdom_id"], name: "index_outlets_on_chiefdom_id"
     t.index ["dealer_id"], name: "index_outlets_on_dealer_id"
     t.index ["district_id"], name: "index_outlets_on_district_id"
     t.index ["region_id"], name: "index_outlets_on_region_id"
-    t.index ["township_id"], name: "index_outlets_on_township_id"
   end
 
   create_table "regions", force: :cascade do |t|
@@ -199,15 +197,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_16_142500) do
     t.index ["submitted_by_id"], name: "index_submissions_on_submitted_by_id"
   end
 
-  create_table "townships", force: :cascade do |t|
-    t.string "name", null: false
-    t.bigint "chiefdom_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["chiefdom_id"], name: "index_townships_on_chiefdom_id"
-    t.index ["name", "chiefdom_id"], name: "index_townships_on_name_and_chiefdom_id", unique: true
-  end
-
   create_table "users", force: :cascade do |t|
     t.string "name"
     t.string "email", null: false
@@ -236,7 +225,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_16_142500) do
   add_foreign_key "outlets", "dealers"
   add_foreign_key "outlets", "districts"
   add_foreign_key "outlets", "regions"
-  add_foreign_key "outlets", "townships"
   add_foreign_key "submission_items", "chiefdoms"
   add_foreign_key "submission_items", "dealers"
   add_foreign_key "submission_items", "districts"
@@ -245,5 +233,4 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_16_142500) do
   add_foreign_key "submissions", "agencies"
   add_foreign_key "submissions", "drafts"
   add_foreign_key "submissions", "users", column: "submitted_by_id"
-  add_foreign_key "townships", "chiefdoms"
 end

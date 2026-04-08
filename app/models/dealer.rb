@@ -10,7 +10,7 @@ class Dealer < ApplicationRecord
     validates :name, presence: true, uniqueness: true
     validates :status, presence: true
     validates :category, presence: true
-    validates :licensing_status, inclusion: { in: ["Active", "Not Licensed"] }
+    validates :licensing_status, inclusion: { in: ["Yes", "No"] }
 
     def expired?
       return false unless license_expiry_date

@@ -2,29 +2,6 @@ class Api::AuthController < ApplicationController
 
   private
 
-  def generate_jwt_token(user_id, expires_in: 30.minutes)
-    exp = Time.current.to_i + expires_in.to_i
-    payload = {
-      user_id: user_id,
-      exp: exp,
-      iat: Time.current.to_i,
-      iss: 'nafra-api',
-      aud: 'nafra-frontend'
-    }
-    JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
-  end
-
-  def decode_jwt_token(token)
-    JWT.decode(
-      token, 
-      Rails.application.secret_key_base, 
-      true, 
-      { algorithm: 'HS256', iss: 'nafra-api', aud: 'nafra-frontend' }
-    )[0]
-  rescue JWT::ExpiredSignature, JWT::VerificationError => e
-    nil
-  end
-
   public
 
   def login

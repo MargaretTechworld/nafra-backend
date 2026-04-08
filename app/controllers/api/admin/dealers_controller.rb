@@ -43,7 +43,7 @@ class Api::Admin::DealersController < ApplicationController
       :name, :license_number, :status, :category, :category_type, 
       :head_office_address, :ceo_name, :registration_date, :license_expiry_date, :licensing_status,
       contact_people_attributes: [:id, :name, :phone, :email, :role, :is_primary, :_destroy],
-      outlets_attributes: [:id, :address, :region_id, :district_id, :chiefdom_id, :township_id, :_destroy]
+      outlets_attributes: [:id, :address, :region_id, :district_id, :chiefdom_id, :_destroy]
     )
   end
 

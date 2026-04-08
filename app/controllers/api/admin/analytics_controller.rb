@@ -160,17 +160,19 @@ class Api::Admin::AnalyticsController < ApplicationController
   end
 
   def license_status_summary
-    active_count = Dealer.where(licensing_status: "Active")
+    # 'Yes' means licensed AND the date hasn't passed
+    active_count = Dealer.where(licensing_status: "Yes")
                          .where("license_expiry_date >= ?", Date.current)
                          .count
-    expired_count = Dealer.where("license_expiry_date < ?", Date.current)
-                          .or(Dealer.where(licensing_status: "Not Licensed"))
-                          .count
+
+    # Everything else is considered non-compliant for the dashboard summary
+    total_count = Dealer.count
+    expired_count = total_count - active_count
     
     render json: {
       active: active_count,
       expired: expired_count,
-      total: Dealer.count
+      total: total_count
     }
   end
 
